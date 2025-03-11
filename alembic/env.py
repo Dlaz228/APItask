@@ -7,7 +7,8 @@ from alembic import context
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
-
+# Тут добавили в пути нашу папку app, чтобы алембик её увидел.
+# Порядок импортов специально нарушен, т.к. код выполняется построчно
 sys.path.append(os.path.join(sys.path[0], 'src'))
 
 from src.config import settings
@@ -36,7 +37,7 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-target_metadata = Base.metadata
+target_metadata = Base.metadata  # И последнее - дописали, что наша целевая метаинформация содержится в классе Base
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:

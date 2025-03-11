@@ -17,6 +17,12 @@ class RollUpdate(BaseModel):
 
 
 class Roll(RollBase):
-    id: int = Field(..., description="Уникальный идентификатор рулона")
-    added_at: datetime = Field(..., description="Дата добавления рулона на склад")
+    id: int = Field(description="Уникальный идентификатор рулона")
+    created_at: datetime = Field(description="Дата добавления рулона на склад")
     removed_at: datetime | None = Field(None, description="Дата удаления рулона со склада")
+
+    class Config:
+        from_attributes = True
+        json_encoders = {
+            datetime: lambda v: v.strftime("%Y-%m-%d %H:%M:%S")  # Кастомный формат
+        }
