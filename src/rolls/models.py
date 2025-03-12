@@ -15,7 +15,7 @@ class Roll(Base):
         nullable=False,
         server_default=func.date_trunc('second', func.now())
     )
-    deleted_at: Mapped[datetime | None] = mapped_column(
+    removed_at: Mapped[datetime | None] = mapped_column(
         DateTime,
-        server_default=func.date_trunc('second', func.now())
+        nullable=True
     )

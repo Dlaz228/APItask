@@ -7,10 +7,7 @@ import uvicorn
 app = FastAPI()
 
 
-@asynccontextmanager
-async def lifespan(src: FastAPI):
-    initialize_database()
-    yield
+initialize_database()
 
 app.include_router(rolls_router, prefix="/rolls", tags=["rolls"])
 
