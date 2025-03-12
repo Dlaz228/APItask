@@ -3,6 +3,7 @@ from src.rolls.models import Roll
 from .schemas import StatsFilter, StatsResponse
 from typing import List, Callable
 from datetime import date, timedelta, time
+from src.exceptions import DatabaseError
 
 
 def calculate_stats(data: List[float], operation: Callable[[List[float]], float], default: float = 0) -> float:
@@ -13,7 +14,7 @@ def calculate_avg(data: List[float], default: float = 0) -> float:
     return round(sum(data) / len(data), 2) if data else default
 
 
-def hours_to_time(seconds: float) -> time | None:
+def seconds_to_time(seconds: float) -> time | None:
     if seconds is None:
         return None
 
@@ -53,61 +54,69 @@ def get_filtered_days(stats: dict[date, dict[str, float]], key: str) -> tuple[da
 
 
 def get_roll_stats(db: Session, filters: StatsFilter) -> StatsResponse:
-    added_rolls_count = db.query(Roll).filter(
-        Roll.created_at >= filters.start_date,
-        Roll.created_at <= filters.end_date
-    ).count()
+    try:
+        added_rolls_count = db.query(Roll).filter(
+            Roll.created_at >= filters.start_date,
+            Roll.created_at <= filters.end_date
+        ).count()
 
-    removed_rolls_count = db.query(Roll).filter(
-        Roll.removed_at >= filters.start_date,
-        Roll.removed_at <= filters.end_date
-    ).count()
+        removed_rolls_count = db.query(Roll).filter(
+            Roll.removed_at >= filters.start_date,
+            Roll.removed_at <= filters.end_date
+        ).count()
 
-    rolls_in_period = db.query(Roll).filter(
-        Roll.created_at >= filters.start_date,
-        Roll.removed_at < filters.end_date
-    ).all()
+        rolls_in_period = db.query(Roll).filter(
+            Roll.created_at >= filters.start_date,
+            Roll.removed_at < filters.end_date
+        ).all()
 
-    lengths = [roll.length for roll in rolls_in_period]
-    weights = [roll.weight for roll in rolls_in_period]
+        rolls_in_specific_period = db.query(Roll).filter(
+            Roll.created_at >= filters.start_date,
+            Roll.removed_at <= filters.end_date
+        ).all()
 
-    avg_length = calculate_avg(lengths)
-    avg_weight = calculate_avg(weights)
+        lengths = [roll.length for roll in rolls_in_period]
+        weights = [roll.weight for roll in rolls_in_period]
 
-    max_length = calculate_stats(lengths, max)
-    min_length = calculate_stats(lengths, min)
-    max_weight = calculate_stats(weights, max)
-    min_weight = calculate_stats(weights, min)
+        avg_length = calculate_avg(lengths)
+        avg_weight = calculate_avg(weights)
 
-    total_weight = calculate_stats(weights, sum)
+        max_length = calculate_stats(lengths, max)
+        min_length = calculate_stats(lengths, min)
+        max_weight = calculate_stats(weights, max)
+        min_weight = calculate_stats(weights, min)
 
-    time_diffs = [
-        (roll.removed_at - roll.created_at).total_seconds()
-        for roll in rolls_in_period
-        if roll.removed_at is not None
-    ]
-    max_time_between_add_remove = hours_to_time(calculate_stats(time_diffs, max, default=0.0))
-    min_time_between_add_remove = hours_to_time(calculate_stats(time_diffs, min, default=0.0))
+        total_weight = calculate_stats(weights, sum)
 
-    daily_stats = calculate_daily_and_weight_stats(rolls_in_period)
+        time_diffs = [
+            (roll.removed_at - roll.created_at).total_seconds()
+            for roll in rolls_in_specific_period
+            if roll.removed_at is not None
+        ]
+        max_time_between_add_remove = seconds_to_time(calculate_stats(time_diffs, max, default=0.0))
+        min_time_between_add_remove = seconds_to_time(calculate_stats(time_diffs, min, default=0.0))
 
-    min_rolls_day, max_rolls_day = get_filtered_days(daily_stats, "rolls_count")
-    min_weight_day, max_weight_day = get_filtered_days(daily_stats, "total_weight")
+        daily_stats = calculate_daily_and_weight_stats(rolls_in_period)
 
-    return StatsResponse(
-        added_rolls_count=added_rolls_count,
-        removed_rolls_count=removed_rolls_count,
-        avg_length=avg_length,
-        avg_weight=avg_weight,
-        max_length=max_length,
-        min_length=min_length,
-        max_weight=max_weight,
-        min_weight=min_weight,
-        total_weight=total_weight,
-        max_time_between_add_remove=max_time_between_add_remove,
-        min_time_between_add_remove=min_time_between_add_remove,
-        max_rolls_day=max_rolls_day,
-        min_rolls_day=min_rolls_day,
-        max_weight_day=max_weight_day,
-        min_weight_day=min_weight_day,
-    )
+        min_rolls_day, max_rolls_day = get_filtered_days(daily_stats, "rolls_count")
+        min_weight_day, max_weight_day = get_filtered_days(daily_stats, "total_weight")
+
+        return StatsResponse(
+            added_rolls_count=added_rolls_count,
+            removed_rolls_count=removed_rolls_count,
+            avg_length=avg_length,
+            avg_weight=avg_weight,
+            max_length=max_length,
+            min_length=min_length,
+            max_weight=max_weight,
+            min_weight=min_weight,
+            total_weight=total_weight,
+            max_time_between_add_remove=max_time_between_add_remove,
+            min_time_between_add_remove=min_time_between_add_remove,
+            max_rolls_day=max_rolls_day,
+            min_rolls_day=min_rolls_day,
+            max_weight_day=max_weight_day,
+            min_weight_day=min_weight_day,
+        )
+    except Exception as e:
+        raise DatabaseError(detail=f"Ошибка при расчете статистики: {str(e)}")
