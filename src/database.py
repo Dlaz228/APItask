@@ -6,6 +6,7 @@ from alembic import command
 from alembic.config import Config
 from src.config import settings
 from src.exceptions import DatabaseError
+from pathlib import Path
 
 engine = create_engine(settings.DATABASE_URL)
 
@@ -18,12 +19,16 @@ def check_and_create_database():
     server_url = f"postgresql://{settings.DB_USER}:{settings.DB_PASS}@{settings.DB_HOST}:{settings.DB_PORT}"
 
     try:
-        engine = create_engine(server_url)
+        engine = create_engine(server_url, isolation_level="AUTOCOMMIT")
+
         with engine.connect() as conn:
             result = conn.execute(text(f"SELECT 1 FROM pg_database WHERE datname = '{settings.DB_NAME}'"))
             if not result.scalar():
-                conn.execution_options(isolation_level="AUTOCOMMIT")
                 conn.execute(text(f"CREATE DATABASE {settings.DB_NAME}"))
+                print(f"База данных '{settings.DB_NAME}' успешно создана.")
+            else:
+                print(f"База данных '{settings.DB_NAME}' уже существует.")
+
     except OperationalError as e:
         raise DatabaseError(detail=f"Ошибка при проверке или создании базы данных: {str(e)}")
     except Exception as e:
@@ -45,7 +50,9 @@ def check_and_create_tables():
 
 def apply_alembic_migrations():
     try:
-        os.chdir("C:\\APItask")
+        script_dir = Path(__file__).resolve().parent.parent
+
+        os.chdir(script_dir)
 
         alembic_cfg = Config("alembic.ini")
 
