@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from src.rolls.models import Roll
-from src.rolls.schemas import RollBase, RollFilter
+from src.rolls.schemas import RollBase, RollFilter, RemoveRoll
 from src.exceptions import DatabaseError, RollNotFoundError
 
 
@@ -47,19 +47,19 @@ def get_rolls_by_filter(db: Session, filters: RollFilter, skip: int = 0, limit: 
         raise DatabaseError(detail=f"Ошибка при получении рулонов: {str(e)}")
 
 
-def remove_roll(db: Session, roll_id: int):
+def remove_roll(db: Session, roll: RemoveRoll):
     try:
-        db_roll = db.query(Roll).filter(Roll.id == roll_id).first()
+        db_roll = db.query(Roll).filter(Roll.id == roll.roll_id).first()
 
         if db_roll is None:
-            raise RollNotFoundError(roll_id=roll_id)
+            raise RollNotFoundError(roll_id=roll.roll_id)
 
         db_roll.removed_at = func.date_trunc("second", func.now())
         db.commit()
         db.refresh(db_roll)
         return db_roll
     except RollNotFoundError:
-        raise  # Пробрасываем ошибку, если рулон не найден
+        raise
     except Exception as e:
-        db.rollback()  # Откатываем транзакцию в случае ошибки
+        db.rollback()
         raise DatabaseError(detail=f"Ошибка при удалении рулона: {str(e)}")

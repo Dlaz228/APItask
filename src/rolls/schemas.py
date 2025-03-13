@@ -15,6 +15,10 @@ class RollBase(BaseModel):
     weight: float = Field(..., gt=0, description="Вес рулона в килограммах")
 
 
+class RemoveRoll(BaseModel):
+    roll_id: int = Field(..., gt=0, description="Уникальный идентификатор рулона")
+
+
 class Roll(RollBase):
     """
     Схема для представления рулона.

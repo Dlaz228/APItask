@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from src.database import get_db
-from src.rolls.schemas import Roll, RollBase, RollFilter
+from src.rolls.schemas import Roll, RollBase, RollFilter, RemoveRoll
 from src.rolls.service import create_roll, get_rolls_by_filter, remove_roll
 from src.exceptions import DatabaseError, RollNotFoundError
 
@@ -30,9 +30,9 @@ def get_rolls(
 
 
 @router.put("/{roll_id}/RemoveRoll/", response_model=Roll)
-def soft_remove_roll(roll_id: int, db: Session = Depends(get_db)):
+def soft_remove_roll(roll: RemoveRoll = Depends(), db: Session = Depends(get_db)):
     try:
-        return remove_roll(db=db, roll_id=roll_id)
+        return remove_roll(db=db, roll=roll)
     except RollNotFoundError as e:
         raise e
     except Exception as e:
