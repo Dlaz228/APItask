@@ -24,11 +24,7 @@ def check_and_create_database():
         with engine.connect() as conn:
             result = conn.execute(text(f"SELECT 1 FROM pg_database WHERE datname = '{settings.DB_NAME}'"))
             if not result.scalar():
-<<<<<<< HEAD
                 conn.execute(text(f'CREATE DATABASE "{settings.DB_NAME}"'))
-=======
-                conn.execute(text(f"CREATE DATABASE {settings.DB_NAME}"))
->>>>>>> 0ca3adec3cbeadc6441dea5f538c023ee451649c
                 print(f"База данных '{settings.DB_NAME}' успешно создана.")
             else:
                 print(f"База данных '{settings.DB_NAME}' уже существует.")
