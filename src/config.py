@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     DB_USER: str
     DB_PASS: str
     DB_NAME: str
+    APP_HOST: str
+    APP_PORT: int
 
     @property
     def DATABASE_URL(self) -> str:

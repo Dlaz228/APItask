@@ -4,7 +4,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from src.database import Base
 
 
-class Roll(Base):
+class RollModel(Base):
     """
     Модель для таблицы 'roll'.
 

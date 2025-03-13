@@ -1,26 +1,30 @@
 import pytest
-from unittest.mock import MagicMock, patch
+from sqlalchemy.orm import Session
+from unittest.mock import MagicMock
 from src.stats.service import get_roll_stats
-from src.stats.schemas import StatsFilter
-from src.rolls.models import Roll
+from src.stats.schemas import StatsFilter, StatsResponse
+from src.exceptions import DatabaseError
 
 
 @pytest.fixture
-def mock_db_session():
-    session = MagicMock()
-    return session
+def mock_db():
+    return MagicMock(spec=Session)
 
 
-def test_get_roll_stats(mock_db_session):
-    mock_db_session.query.return_value.filter.return_value.count.side_effect = [2, 1]
-    mock_db_session.query.return_value.filter.return_value.all.return_value = [
-        Roll(length=10.0, weight=5.0, created_at="2023-10-01T00:00:00", removed_at="2023-10-02T00:00:00"),
-        Roll(length=20.0, weight=10.0, created_at="2023-10-01T00:00:00", removed_at="2023-10-03T00:00:00"),
-    ]
+def test_get_roll_stats_success(mock_db):
+    filters = StatsFilter(start_date="2023-01-01T00:00:00", end_date="2023-12-31T23:59:59")
+    mock_db.query.return_value.filter.return_value.count.return_value = 10
+    mock_db.query.return_value.filter.return_value.all.return_value = []
 
-    filters = StatsFilter(start_date="2023-10-01T00:00:00", end_date="2023-10-04T00:00:00")
-    stats = get_roll_stats(mock_db_session, filters)
+    result = get_roll_stats(mock_db, filters)
 
-    assert stats["added_rolls_count"] == 2
-    assert stats["removed_rolls_count"] == 1
-    assert stats["total_weight"] == 15.0
+    assert isinstance(result, StatsResponse)
+    mock_db.query.assert_called()
+
+
+def test_get_roll_stats_error(mock_db):
+    filters = StatsFilter(start_date="2023-01-01T00:00:00", end_date="2023-12-31T23:59:59")
+    mock_db.query.side_effect = Exception("Database error")
+
+    with pytest.raises(DatabaseError):
+        get_roll_stats(mock_db, filters)

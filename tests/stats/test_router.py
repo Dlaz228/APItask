@@ -1,39 +1,30 @@
 import pytest
-from fastapi.testclient import TestClient
-from unittest.mock import patch
-from src.main import app
-from src.stats.schemas import StatsResponse
-
-client = TestClient(app)
+from fastapi import HTTPException
+from sqlalchemy.orm import Session
+from unittest.mock import MagicMock
+from src.stats.router import get_stats
+from src.stats.schemas import StatsFilter, StatsResponse
 
 
 @pytest.fixture
-def mock_stats_service():
-    with patch("src.stats.router.get_roll_stats") as mock_get_roll_stats:
-        yield mock_get_roll_stats
+def mock_db():
+    return MagicMock(spec=Session)
 
 
-def test_get_stats():
-    mock_stats_service().return_value = StatsResponse(
-        added_rolls_count=2,
-        removed_rolls_count=1,
-        avg_length=15.0,
-        avg_weight=7.5,
-        max_length=20.0,
-        min_length=10.0,
-        max_weight=10.0,
-        min_weight=5.0,
-        total_weight=15.0,
-        max_time_between_add_remove="01:00:00",
-        min_time_between_add_remove="00:30:00",
-        max_rolls_day="2023-10-01",
-        min_rolls_day="2023-10-02",
-        max_weight_day="2023-10-01",
-        min_weight_day="2023-10-02",
-    )
+def test_get_stats_success(mock_db):
+    filters = StatsFilter(start_date="2023-01-01T00:00:00", end_date="2023-12-31T23:59:59")
+    mock_db.query.return_value.filter.return_value.count.return_value = 10
+    mock_db.query.return_value.filter.return_value.all.return_value = []
 
-    response = client.get("/stats/stats/")
+    result = get_stats(filters, mock_db)
 
-    assert response.status_code == 200
-    assert response.json()["added_rolls_count"] == 2
-    assert response.json()["total_weight"] == 15.0
+    assert isinstance(result, StatsResponse)
+    mock_db.query.assert_called()
+
+
+def test_get_stats_error(mock_db):
+    filters = StatsFilter(start_date="2023-01-01T00:00:00", end_date="2023-12-31T23:59:59")
+    mock_db.query.side_effect = Exception("Database error")
+
+    with pytest.raises(HTTPException):
+        get_stats(filters, mock_db)

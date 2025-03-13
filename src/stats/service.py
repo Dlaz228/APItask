@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
-from src.rolls.models import Roll
+from src.rolls.models import RollModel
+from src.rolls.schemas import Roll
 from .schemas import StatsFilter, StatsResponse
 from typing import List, Callable
 from datetime import date, timedelta, time
@@ -55,24 +56,24 @@ def get_filtered_days(stats: dict[date, dict[str, float]], key: str) -> tuple[da
 
 def get_roll_stats(db: Session, filters: StatsFilter) -> StatsResponse:
     try:
-        added_rolls_count = db.query(Roll).filter(
-            Roll.created_at >= filters.start_date,
-            Roll.created_at <= filters.end_date
+        added_rolls_count = db.query(RollModel).filter(
+            RollModel.created_at >= filters.start_date,
+            RollModel.created_at <= filters.end_date
         ).count()
 
-        removed_rolls_count = db.query(Roll).filter(
-            Roll.removed_at >= filters.start_date,
-            Roll.removed_at <= filters.end_date
+        removed_rolls_count = db.query(RollModel).filter(
+            RollModel.removed_at >= filters.start_date,
+            RollModel.removed_at <= filters.end_date
         ).count()
 
-        rolls_in_period = db.query(Roll).filter(
-            Roll.created_at >= filters.start_date,
-            Roll.removed_at < filters.end_date
+        rolls_in_period = db.query(RollModel).filter(
+            RollModel.created_at >= filters.start_date,
+            RollModel.removed_at < filters.end_date
         ).all()
 
-        rolls_in_specific_period = db.query(Roll).filter(
-            Roll.created_at >= filters.start_date,
-            Roll.removed_at <= filters.end_date
+        rolls_in_specific_period = db.query(RollModel).filter(
+            RollModel.created_at >= filters.start_date,
+            RollModel.removed_at <= filters.end_date
         ).all()
 
         lengths = [roll.length for roll in rolls_in_period]

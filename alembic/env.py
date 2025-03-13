@@ -13,7 +13,7 @@ sys.path.append(os.path.join(sys.path[0], 'src'))
 
 from src.config import settings
 from src.database import Base
-from src.rolls.models import Roll
+from src.rolls.models import RollModel
 
 
 # this is the Alembic Config object, which provides
