@@ -1,14 +1,22 @@
-import os
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.exc import OperationalError, SQLAlchemyError
 from sqlalchemy.orm import sessionmaker, declarative_base
-from alembic import command
-from alembic.config import Config
 from src.config import settings
 from src.exceptions import DatabaseError
-from pathlib import Path
+from sqlalchemy.pool import StaticPool
 
-engine = create_engine(settings.DATABASE_URL)
+def _make_engine():
+    # SQLite: корректные настройки для работы в FastAPI (несколько потоков/соединений)
+    if settings.DATABASE_URL.startswith("sqlite:///"):
+        return create_engine(
+            settings.DATABASE_URL,
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
+    return create_engine(settings.DATABASE_URL)
+
+
+engine = _make_engine()
 
 sync_session_maker = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -16,51 +24,33 @@ Base = declarative_base()
 
 
 def check_and_create_database():
-    server_url = f"postgresql://{settings.DB_USER}:{settings.DB_PASS}@{settings.DB_HOST}:{settings.DB_PORT}"
-
+    # SQLite создает файл базы данных автоматически при первом подключении
+    # Просто проверяем, что можем подключиться
     try:
-        engine = create_engine(server_url, isolation_level="AUTOCOMMIT")
-
+        engine = _make_engine()
+        # Проверяем подключение
         with engine.connect() as conn:
-            result = conn.execute(text(f"SELECT 1 FROM pg_database WHERE datname = '{settings.DB_NAME}'"))
-            if not result.scalar():
-                conn.execute(text(f'CREATE DATABASE "{settings.DB_NAME}"'))
-                print(f"База данных '{settings.DB_NAME}' успешно создана.")
-            else:
-                print(f"База данных '{settings.DB_NAME}' уже существует.")
-
+            conn.execute(text("SELECT 1"))
+        print(f"База данных SQLite готова к использованию: {settings.DB_PATH}")
     except OperationalError as e:
-        raise DatabaseError(detail=f"Ошибка при проверке или создании базы данных: {str(e)}")
+        raise DatabaseError(detail=f"Ошибка при подключении к базе данных: {str(e)}")
     except Exception as e:
         raise DatabaseError(detail=f"Неизвестная ошибка при работе с базой данных: {str(e)}")
 
 
 def check_and_create_tables():
     try:
-        engine = create_engine(settings.DATABASE_URL)
+        engine = _make_engine()
         inspector = inspect(engine)
 
         if 'roll' not in inspector.get_table_names():
-            apply_alembic_migrations()
+            # Для SQLite не используем Alembic на старте приложения:
+            # просто создаём таблицы из SQLAlchemy моделей.
+            Base.metadata.create_all(bind=engine)
     except OperationalError as e:
         raise DatabaseError(detail=f"Ошибка при проверке или создании таблиц: {str(e)}")
     except Exception as e:
         raise DatabaseError(detail=f"Неизвестная ошибка при работе с таблицами: {str(e)}")
-
-
-def apply_alembic_migrations():
-    try:
-        script_dir = Path(__file__).resolve().parent.parent
-
-        os.chdir(script_dir)
-
-        alembic_cfg = Config("alembic.ini")
-
-        command.revision(alembic_cfg, autogenerate=True, message="Initial migration")
-
-        command.upgrade(alembic_cfg, "head")
-    except Exception as e:
-        raise DatabaseError(detail=f"Ошибка при применении миграций Alembic: {str(e)}")
 
 
 def initialize_database():

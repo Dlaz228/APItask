@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from datetime import datetime
 from src.rolls.models import RollModel
 from src.rolls.schemas import RollBase, RollFilter, RemoveRoll
 from src.exceptions import DatabaseError, RollNotFoundError
@@ -54,7 +54,8 @@ def remove_roll(db: Session, roll: RemoveRoll):
         if db_roll is None:
             raise RollNotFoundError(roll_id=roll.roll_id)
 
-        db_roll.removed_at = func.date_trunc("second", func.now())
+        # MS SQL Server: используем GETDATE() для получения текущего времени
+        db_roll.removed_at = datetime.now()
         db.commit()
         db.refresh(db_roll)
         return db_roll

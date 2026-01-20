@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import BigInteger, DateTime, func
+from sqlalchemy import BigInteger, DateTime, text
 from sqlalchemy.orm import Mapped, mapped_column
 from src.database import Base
 
@@ -23,6 +23,7 @@ class RollModel(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
-        server_default=func.date_trunc("second", func.now()),
+        # SQLite: поддерживаемый дефолт
+        server_default=text("CURRENT_TIMESTAMP"),
     )
     removed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

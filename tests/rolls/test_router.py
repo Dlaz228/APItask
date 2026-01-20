@@ -44,15 +44,17 @@ def test_get_rolls_success(mock_db):
                           removed_at="2023-02-01T00:00:00")
     mock_roll2 = RollModel(id=2, length=10.0, weight=5.0, created_at="2023-01-01T00:00:00",
                           removed_at="2023-02-01T00:00:00")
-    mock_db.query.return_value.filter.return_value.offset.return_value.limit.return_value.all.return_value = [
-        mock_roll, mock_roll2]
+    mock_db.query.return_value.offset.return_value.limit.return_value.all.return_value = [
+        mock_roll,
+        mock_roll2,
+    ]
 
     filters = RollFilter()
-    result = get_rolls(filters, mock_db)
+    result = get_rolls(filters=filters, skip=0, limit=100, db=mock_db)
 
     assert isinstance(result, list)
     assert len(result) == 2
-    assert isinstance(result[0], Roll)
+    assert isinstance(result[0], RollModel)
 
 
 def test_get_rolls_error(mock_db):

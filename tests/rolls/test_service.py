@@ -40,7 +40,7 @@ def test_create_roll_error(mock_db):
 def test_get_rolls_by_filter_success(mock_db):
     # Настраиваем мок для возврата списка
     mock_roll = RollModel(id=1, length=10.0, weight=5.0, created_at="2023-01-01T00:00:00")
-    mock_db.query.return_value.filter.return_value.offset.return_value.limit.return_value.all.return_value = [mock_roll]
+    mock_db.query.return_value.offset.return_value.limit.return_value.all.return_value = [mock_roll]
 
     filters = RollFilter()
     result = get_rolls_by_filter(mock_db, filters)

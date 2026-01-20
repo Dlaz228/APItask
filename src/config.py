@@ -10,27 +10,23 @@ class Settings(BaseSettings):
     Настройки приложения, загружаемые из переменных окружения.
 
     Атрибуты:
-        DB_HOST (str): Хост базы данных.
-        DB_PORT (str): Порт базы данных.
-        DB_USER (str): Имя пользователя базы данных.
-        DB_PASS (str): Пароль пользователя базы данных.
-        DB_NAME (str): Название базы данных.
+        DB_PATH (str): Путь к файлу базы данных SQLite (по умолчанию database.db в корне проекта).
+        APP_HOST (str): Хост приложения.
+        APP_PORT (int): Порт приложения.
 
     Методы:
-        DATABASE_URL: Возвращает строку подключения к базе данных.
+        DATABASE_URL: Возвращает строку подключения к базе данных SQLite.
     """
 
-    DB_HOST: str
-    DB_PORT: str
-    DB_USER: str
-    DB_PASS: str
-    DB_NAME: str
+    DB_PATH: str = "database.db"
     APP_HOST: str
     APP_PORT: int
 
     @property
     def DATABASE_URL(self) -> str:
-        return f"postgresql://{self.DB_USER}:{self.DB_PASS}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+        # SQLite создает файл автоматически, если его нет
+        db_file = Path(env_path) / self.DB_PATH
+        return f"sqlite:///{db_file}"
 
     class Config:
         env_file = f"{env_path}/.env"
